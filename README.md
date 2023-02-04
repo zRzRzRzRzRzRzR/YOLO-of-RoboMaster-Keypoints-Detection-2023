@@ -22,7 +22,7 @@
 | - | - | - |
 | CPU | 15 vCPU Intel(R) Xeon(R) Platinum 8358P CPU @ 2.60GHz | Inter NUC 11th 11350H |
 | GPU | NVIDA A5000 x 8 | Inter NUC 11th Xe核显 |
-| Memory| 80GB | 16GB |
+| Memory| 80GB | 8GB |
 
 | 环境配置 |训练设备 |推理设备 |
 | - | - | - |
