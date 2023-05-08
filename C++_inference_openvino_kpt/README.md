@@ -40,12 +40,6 @@
     + __BOARD__ 视觉识别板目标检测，请将```DETECT_MODE```设置为```2```。<br>
       上述不同模式对应的应用场景，因此，不同类别中的```CLS_NUM```,```KPT_NUM```值(类别数量和关键点数量)不同。
       不同模式所对应的权重文件不同。```MODEL_PATH```是推理网络的模型位置，在这里放入 ```.xml``` 或 ```.onnx```量化权重文件。
-+ 由于需要应付车辆被打击后的装甲板突然熄灭导致的误识别，我们将上一帧识别的信息给予一定的权重，在下一帧的时候如果其识别权重+
-  上一帧的权重能够大于置信度阈值，我们仍视为装甲板。<br>
-  默认状态下，每一个bbox的置信度计算公式如下：
-  ```
-  min(box_prob * max_prob + last_conf * CONF_REMAIN, 1.0)
-  ```
 
 ### yolov7_kpt.cpp：<br>
 
@@ -67,16 +61,15 @@ struct Object_result<br>
 
 ### demo_weight：<br>
 
-包含一份开箱即用的OpenV权重文件，效果仅供推理使用。
+包含一份针对2023年官方能量机关红色待激活识别的代码。
 
 ## 推理样例展示
 
 图片展示:<br>
-![](https://github.com/zRzRzRzRzRzRzR/YOLO-of-RoboMaster-Keypoints-Detection-2023/blob/main/show_pic/result_openvino.jpg)<br>
-
+![](https://github.com/zRzRzRzRzRzRzR/YOLO-of-RoboMaster-Keypoints-Detection-2023/blob/main/show_pic/result_openvino.jpg)
 输出展示：<br>
-若选择的推理模式为 __WIN__ 或 __ARMOR__ 类别，将会包含 __标签，BBOX，关键点坐标__ 数据。输出的图片将包含 ```KPT_NUM```
-个的蓝色关键点。样例如下:
+若选择的推理模式为 __ARMOR__ 类别，将会包含 __标签，BBOX，关键点坐标__ 数据。输出的图片将包含 ```KPT_NUM```
+个的绿色关键点。样例如下:
 
 ```
 label:10
@@ -91,6 +84,13 @@ label:1
 bbox:[122 x 433 from (192, 155)]
 ```
 
+若选择的推理模式为 __WIN__ 类别，将会在 __ARMOR__ 的基础上额外输出一个打击板中心坐标，逻辑如下
++ 如果能量机关装甲板四个点都检测到，直接取四个点中点
++ 如果左上，右下 / 左下， 有右上两个点检测到，另外两个点缺失一个，则取这两个检测到的点中点。
++ 如果不满足上面两个情况，取bbox中点。
+经过测试，该方案能保证，只要能检测到目标板，一定能精确的检测到打击到目标板中心。
+
+
 ## 推理代码测试平台
 
 ```
@@ -104,7 +104,7 @@ Memory: 8GB
 系统配置:
 OS: Ubuntu 20.04.5
 Kernel: 5.15.0
-Openvino: 2022.1
+Openvino: 2022.3
 gcc/g++ : 9.4.0
 cmake : 3.16.3
 Python : 3.8.5

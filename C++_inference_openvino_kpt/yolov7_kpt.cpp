@@ -4,7 +4,8 @@ yolo_kpt::yolo_kpt() {
     model = core.read_model(MODEL_PATH);
     std::shared_ptr<ov::Model> model = core.read_model(MODEL_PATH);
     compiled_model = core.compile_model(model, DEVICE);
-    auto input_port = compiled_model.input();
+    std::map<std::string, std::string> config = {
+            {InferenceEngine::PluginConfigParams::KEY_PERF_COUNT, InferenceEngine::PluginConfigParams::YES}};
     infer_request = compiled_model.create_infer_request();
     input_tensor1 = infer_request.get_input_tensor(0);
 }
@@ -46,12 +47,12 @@ cv::Rect yolo_kpt::scale_box(cv::Rect box, std::vector<float> &padd, float raw_w
 std::vector<cv::Point2f>
 yolo_kpt::scale_box_kpt(std::vector<cv::Point2f> points, std::vector<float> &padd, float raw_w, float raw_h, int idx) {
     std::vector<cv::Point2f> scaled_points;
-    for (int ii = 0; ii < 4; ii++) {
-        points[idx * 4 + ii].x = std::max(
-                std::min((points[idx * 4 + ii].x - padd[0]) / padd[2], (float) (raw_w - 1)), 0.f);
-        points[idx * 4 + ii].y = std::max(
-                std::min((points[idx * 4 + ii].y - padd[1]) / padd[2], (float) (raw_h - 1)), 0.f);
-        scaled_points.push_back(points[idx * 4 + ii]);
+    for (int ii = 0; ii < KPT_NUM; ii++) {
+        points[idx * KPT_NUM + ii].x = std::max(
+                std::min((points[idx * KPT_NUM + ii].x - padd[0]) / padd[2], (float) (raw_w - 1)), 0.f);
+        points[idx * KPT_NUM + ii].y = std::max(
+                std::min((points[idx * KPT_NUM + ii].y - padd[1]) / padd[2], (float) (raw_h - 1)), 0.f);
+        scaled_points.push_back(points[idx * KPT_NUM + ii]);
 
     }
     return scaled_points;
@@ -63,21 +64,56 @@ void yolo_kpt::drawPred(int classId, float conf, cv::Rect box, std::vector<cv::P
     float y0 = box.y;
     float x1 = box.x + box.width;
     float y1 = box.y + box.height;
-    cv::rectangle(frame, cv::Point(x0, y0), cv::Point(x1, y1), cv::Scalar(0, 255, 0), 1);
+    cv::rectangle(frame, cv::Point(x0, y0), cv::Point(x1, y1), cv::Scalar(255, 255, 255), 1);
+
+    cv::Point2f keypoints_center(0, 0);
+    std::vector<bool> valid_keypoints(5, false);
+    for (int i = 0; i < point.size(); i++) {
+        if (i != 2 && point[i].x != 0 && point[i].y != 0) {
+            valid_keypoints[i] = true;
+        }
+    }
+
+    // 四种情况判断
+    if (valid_keypoints[0] && valid_keypoints[1] && valid_keypoints[3] && valid_keypoints[4]) {
+        // 1. 四个关键点都有效，直接取中心点
+        keypoints_center = (point[0] + point[1] + point[3] + point[4]) * 0.25;
+    } else if (valid_keypoints[0] && valid_keypoints[3] && (!valid_keypoints[1] || !valid_keypoints[4])) {
+        // 2. 0 3关键点有效，1 4 关键点缺少一个以上： 算 0 3 关键点的中点
+        keypoints_center = (point[0] + point[3]) * 0.5;
+    } else if (valid_keypoints[1] && valid_keypoints[4] && (!valid_keypoints[0] || !valid_keypoints[3])) {
+        // 3. 1 4关键点有效，0 3 关键点缺少一个以上： 算 1 4 关键点的中点
+        keypoints_center = (point[1] + point[4]) * 0.5;
+    } else {
+        // 4. 以上三个都不满足，算bbox中心点
+        keypoints_center = cv::Point2f(x0 + box.width / 2, y0 + box.height / 2);
+    }
+
+    cv::circle(frame, keypoints_center, 2, cv::Scalar(255, 255, 255), 2);
+
+
     for (int i = 0; i < KPT_NUM; i++)
-        cv::circle(frame, point[i], 2, cv::Scalar(255, 0, 0), 2);
+        if (DETECT_MODE == 1)
+            if (i == 2)
+                cv::circle(frame, point[i], 4, cv::Scalar(163, 164, 163), 4);
+            else
+                cv::circle(frame, point[i], 3, cv::Scalar(0, 255, 0), 3);
+
+
     std::string label = cv::format("%.2f", conf);
     if (!classes.empty()) {
         CV_Assert(classId < (int) classes.size());
         label = classes[classId] + ": " + label;
     }
+
     int baseLine;
     cv::Size labelSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.25, 1, &baseLine);
     y0 = std::max(int(y0), labelSize.height);
     cv::rectangle(frame, cv::Point(x0, y0 - round(1.5 * labelSize.height)),
-                  cv::Point(x0 + round(2 * labelSize.width), y0 + baseLine), cv::Scalar(0, 255, 0), cv::FILLED);
+                  cv::Point(x0 + round(2 * labelSize.width), y0 + baseLine), cv::Scalar(255, 255, 255), cv::FILLED);
     cv::putText(frame, label, cv::Point(x0, y0), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(), 1.5);
 }
+
 
 void yolo_kpt::generate_proposals(int stride, const float *feat, std::vector<Object> &objects) { //后处理部分，重做检测层
     int feat_w = IMG_SIZE / stride;
@@ -85,7 +121,7 @@ void yolo_kpt::generate_proposals(int stride, const float *feat, std::vector<Obj
 #if IMG_SIZE == 640
     float anchors[18] = {11, 10, 19, 15,28, 22, 39, 34, 64, 48, 92, 76, 132, 110, 197, 119,  265, 162}; // 6 4 0
 #elif IMG_SIZE == 416
-    float anchors[18] = {12, 10, 19, 14, 26, 20, 37, 31, 61, 46, 88, 68, 113, 105, 193, 108, 245, 149}; // 4 1 6
+    float anchors[18] = {26, 27, 28, 28, 27, 30, 29, 29, 29, 32, 30, 31, 30, 33, 32, 32, 32, 34}; // 4 1 6
 #elif IMG_SIZE == 320
     float anchors[18] = {6,5, 9,7, 13, 9, 18, 15, 30, 23, 46, 37, 60, 52, 94, 56, 125, 72}; // 3 2 0
 #endif
@@ -149,11 +185,9 @@ void yolo_kpt::generate_proposals(int stride, const float *feat, std::vector<Obj
                     tp = sigmoid(tp);
                     if (tp > max_prob)
                         max_prob = tp, idx = k;
-                } //选取最高置信度的类别
+                }
                 float cof = std::min(box_prob * max_prob, 1.0);
-//                float cof = std::min(box_prob * max_prob + CONF_REMAIN, 1.0); // 添加上一帧的保留权重
-                if (cof < CONF_THRESHOLD) continue; // 在判断是否符合任何一个类别
-                last_conf = cof;
+                if (cof < CONF_THRESHOLD) continue;
 
                 //xywh的后处理(python 代码)
                 //xy = (y[..., 0:2] * 2. - 0.5 + self.grid[i]) * self.stride[i]  # xy
@@ -174,7 +208,12 @@ void yolo_kpt::generate_proposals(int stride, const float *feat, std::vector<Obj
                 obj.prob = cof;
                 if (KPT_NUM != 0)
                     for (int k = 0; k < KPT_NUM; k++)
-                        obj.kpt.push_back(cv::Point2f(kptx[k], kpty[k]));
+                        if (k != 2 && kptx[k] > r_x && kptx[k] < r_x + w && kpty[k] > r_y && kpty[k] < r_y + h)
+                            obj.kpt.push_back(cv::Point2f(kptx[k], kpty[k]));
+                        else if (k == 2)
+                            obj.kpt.push_back(cv::Point2f(kptx[k], kpty[k]));
+                        else
+                            obj.kpt.push_back(cv::Point2f(0, 0));
                 objects.push_back(obj);
             }
         }
@@ -197,7 +236,9 @@ std::vector<yolo_kpt::Object> yolo_kpt::work(cv::Mat src_img) {
             }
         }
     }
-    infer_request.infer(); //推理并获得三个提取头
+//    infer_request.infer(); //推理并获得三个提取头
+    infer_request.start_async();
+    infer_request.wait();
     auto output_tensor_p8 = infer_request.get_output_tensor(0);
     const float *result_p8 = output_tensor_p8.data<const float>();
     auto output_tensor_p16 = infer_request.get_output_tensor(1);
@@ -246,8 +287,9 @@ std::vector<yolo_kpt::Object> yolo_kpt::work(cv::Mat src_img) {
         object_result.push_back(obj);
 
 #ifdef VIDEO
-        drawPred(classIds[picked[i]], confidences[picked[i]], scaled_box, scaled_point, src_img,
-                 class_names);
+        if (DETECT_MODE == 1 && classIds[picked[i]] == 0)
+            drawPred(classIds[picked[i]], confidences[picked[i]], scaled_box, scaled_point, src_img,
+                     class_names);
 #endif
     }
 #ifdef VIDEO

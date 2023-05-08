@@ -96,17 +96,6 @@ class WingLoss(nn.Module):
         return y.sum()
 
 
-class KPTLoss(nn.Module):
-    # BCEwithLogitLoss() with reduced missing label effects.
-    def __init__(self, alpha=1.0):
-        super(KPTLoss, self).__init__()
-        self.loss_fcn = WingLoss()  # nn.SmoothL1Loss(reduction='sum')
-        self.alpha = alpha
-
-    def forward(self, pred, truel, mask):
-        loss = self.loss_fcn(pred * mask, truel * mask)
-        return loss / (torch.sum(mask) + 10e-14)
-
 
 class ComputeLoss:
     # Compute losses
@@ -121,8 +110,6 @@ class ComputeLoss:
         BCEcls = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([h['cls_pw']], device=device))
         BCEobj = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([h['obj_pw']], device=device))
         BCE_kptv = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([h['obj_pw']], device=device))
-
-        self.kptloss = KPTLoss()
 
         # Class label smoothing https://arxiv.org/pdf/1902.04103.pdf eqn 3
         self.cp, self.cn = smooth_BCE(eps=h.get('label_smoothing', 0.0))  # positive, negative BCE targets
@@ -174,16 +161,11 @@ class ComputeLoss:
                     # mask
                     kpt_mask = (tkpt[i][:, 0::2] != 0)
                     lkptv += self.BCE_kptv(pkpt_score, kpt_mask.float())
-                    # l2 distance based loss
-                    # lkpt += (((pkpt-tkpt[i])*kpt_mask)**2).mean()  #Try to make this loss based on distance instead of ordinary difference
                     # oks based loss
-                    d = (pkpt_x-tkpt[i][:,0::2])**2 + (pkpt_y-tkpt[i][:,1::2])**2
-                    s = torch.prod(tbox[i][:,-2:], dim=1, keepdim=True)
-                    kpt_loss_factor = (torch.sum(kpt_mask != 0) + torch.sum(kpt_mask == 0))/torch.sum(kpt_mask != 0)
-                    lkpt += kpt_loss_factor*((1 - torch.exp(-d/(s*(4*sigmas**2)+1e-9)))*kpt_mask).mean()
-
-                    # lkpt += (self.kptloss(tkpt[i][:, 0::2], pkpt_x, kpt_mask) + self.kptloss(tkpt[i][:, 1::2], pkpt_y,
-                    #                                                                          kpt_mask)) / 2
+                    d = (pkpt_x - tkpt[i][:, 0::2]) ** 2 + (pkpt_y - tkpt[i][:, 1::2]) ** 2
+                    s = torch.prod(tbox[i][:, -2:], dim=1, keepdim=True)
+                    kpt_loss_factor = (torch.sum(kpt_mask != 0) + torch.sum(kpt_mask == 0)) / torch.sum(kpt_mask != 0)
+                    lkpt += kpt_loss_factor * ((1 - torch.exp(-d / (s * (4 * sigmas ** 2) + 1e-9))) * kpt_mask).mean()
 
                 # Objectness
                 tobj[b, a, gj, gi] = (1.0 - self.gr) + self.gr * iou.detach().clamp(0).type(tobj.dtype)  # iou ratio
@@ -227,7 +209,7 @@ class ComputeLoss:
             # gain = torch.ones(41, device=targets.device)  # normalized to gridspace gain
             gain = torch.ones(self.nkpt * 2 + 7, device=targets.device).long()  # normalized to gridspace gain
         else:
-            gain = torch.ones(7, device=targets.device)  # normalized to gridspace gain
+            gain = torch.ones(7, device=targets.device).long()  # normalized to gridspace gain
         ai = torch.arange(na, device=targets.device).float().view(na, 1).repeat(1, nt)  # same as .repeat_interleave(nt)
         targets = torch.cat((targets.repeat(na, 1, 1), ai[:, :, None]), 2)  # append anchor indices
 

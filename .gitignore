@@ -27,7 +27,6 @@ runs_one_pic/
 
 storage.googleapis.com
 runs/*
-data/*
 data/images/*
 !data/*.yaml
 !data/hyps

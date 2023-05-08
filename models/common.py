@@ -154,15 +154,14 @@ class C2(nn.Module):
         a, b = self.cv1(x).split((self.c, self.c), 1)
         return self.cv2(torch.cat((self.m(a), b), 1))
 
-
 class C2f(nn.Module):
     # CSP Bottleneck with 2 convolutions
-    def __init__(self, c1, c2, n=1, shortcut=False, g=1, e=0.5):  # ch_in, ch_out, number, shortcut, groups, expansion
+    def __init__(self, c1, c2, c2o, n=1, shortcut=True, g=1, e=[0.5,0.5], rate=[1.0 for _ in range(12)]):  # ch_in, ch_out, number, shortcut, groups, expansion
         super().__init__()
-        self.c = int(c2 * e)  # hidden channels
+        self.c = int(c2 * e[1])  # hidden channels
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
         self.cv2 = Conv((2 + n) * self.c, c2, 1)  # optional act=FReLU(c2)
-        self.m = nn.ModuleList(Bottleneck(self.c, self.c, shortcut, g, k=((3, 3), (3, 3)), e=1.0) for _ in range(n))
+        self.m = nn.ModuleList(Bottleneck(self.c, self.c, shortcut, g, k=((3, 3), (3, 3)), e=rate[i]) for i in range(n))
 
     def forward(self, x):
         y = list(self.cv1(x).split((self.c, self.c), 1))
@@ -181,7 +180,6 @@ class C3(nn.Module):
 
     def forward(self, x):
         return self.cv3(torch.cat((self.m(self.cv1(x)), self.cv2(x)), 1))
-
 
 class C2Base(nn.Module):
     # CSP Bottleneck with 2 convolutions
@@ -389,22 +387,23 @@ class SPPCSPC(nn.Module):
         return self.cv7(torch.cat((y1, y2), dim=1))
 
 
+
 class SPPF(nn.Module):
+    """Spatial Pyramid Pooling - Fast (SPPF) layer for YOLOv5 by Glenn Jocher."""
+
     def __init__(self, c1, c2, k=5):  # equivalent to SPP(k=(5, 9, 13))
         super().__init__()
         c_ = c1 // 2  # hidden channels
         self.cv1 = Conv(c1, c_, 1, 1)
         self.cv2 = Conv(c_ * 4, c2, 1, 1)
         self.m = nn.MaxPool2d(kernel_size=k, stride=1, padding=k // 2)
-        # self.m = SoftPool2d(kernel_size=k, stride=1, padding=k // 2)
 
     def forward(self, x):
+        """Forward pass through Ghost Convolution block."""
         x = self.cv1(x)
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')  # suppress torch 1.9.0 max_pool2d() warning
-            y1 = self.m(x)
-            y2 = self.m(y1)
-            return self.cv2(torch.cat((x, y1, y2, self.m(y2)), 1))
+        y1 = self.m(x)
+        y2 = self.m(y1)
+        return self.cv2(torch.cat((x, y1, y2, self.m(y2)), 1))
 
 
 import torch.nn.functional as F

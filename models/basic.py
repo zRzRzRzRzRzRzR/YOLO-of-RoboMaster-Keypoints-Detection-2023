@@ -100,6 +100,8 @@ class Conv(nn.Module):
         return self.act(self.conv(x))
 
 
+
+
 class RobustConv(nn.Module):
     # Robust convolution (use high kernel size 7-11 for: downsampling and other layers). Train for 300 - 450 epochs.
     def __init__(self, c1, c2, k=7, s=1, p=None, g=1, act=True,

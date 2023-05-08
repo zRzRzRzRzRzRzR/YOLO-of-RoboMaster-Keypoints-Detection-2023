@@ -31,6 +31,7 @@ from utils.loss import ComputeLoss
 from utils.plots import plot_images, plot_labels, plot_results, plot_evolution
 from utils.torch_utils import ModelEMA, select_device, intersect_dicts, torch_distributed_zero_first, is_parallel
 from utils.wandb_logging.wandb_utils import WandbLogger, check_wandb_resume
+from models.common import Bottleneck
 
 logger = logging.getLogger(__name__)
 
@@ -331,14 +332,38 @@ def train(hyp, opt, device, tb_writer=None):
                     loss *= 4.
 
             # Backward
-            scaler.scale(loss).backward()
-            # Optimize
-            if ni % accumulate == 0:
-                scaler.step(optimizer)  # optimizer.step
-                scaler.update()
+            if opt.st:
+                loss.backward() #稀疏训练
+            else:
+                scaler.scale(loss).backward()
+            #  ============================= 稀疏训练  =========================== #
+            srtmp = opt.sr * (1 - 0.9 * epoch / epochs)
+            if opt.st:
+                ignore_bn_list = []
+                for k, m in model.named_modules():
+                    if isinstance(m, Bottleneck):
+                        if m.add:
+                            ignore_bn_list.append(k.rsplit(".", 2)[0] + ".cv1.bn")
+                            ignore_bn_list.append(k + '.cv1.bn')
+                            ignore_bn_list.append(k + '.cv2.bn')
+                    if isinstance(m, nn.BatchNorm2d) and (k not in ignore_bn_list):
+                        m.weight.grad.data.add_(srtmp * torch.sign(m.weight.data))  # L1
+                        m.bias.grad.data.add_(opt.sr * 10 * torch.sign(m.bias.data))  # L1
+            #  ============================= 稀疏训练  =========================== #
+
+            #Optimize
+            if opt.st: #稀疏训练
+                optimizer.step()
                 optimizer.zero_grad()
                 if ema:
                     ema.update(model)
+            else: #正常训练
+                if ni % accumulate == 0:
+                    scaler.step(optimizer)  # optimizer.step
+                    scaler.update()
+                    optimizer.zero_grad()
+                    if ema:
+                        ema.update(model)
 
             # Print
             if rank in [-1, 0]:
@@ -355,11 +380,10 @@ def train(hyp, opt, device, tb_writer=None):
                 # Plot
                 if plots and ni < 10:
                     f = save_dir / f'train_batch{ni}.jpg'  # filename
-                    plot_images(imgs, targets, paths, f, kpt_label=kpt_label, kpt_num=kpt_num)
-                    # Thread(target=plot_images, args=(imgs, targets, paths, f), daemon=True).start()
-                    # if tb_writer:
-                    #     tb_writer.add_image(f, result, dataformats='HWC', global_step=epoch)
-                    #     tb_writer.add_graph(torch.jit.trace(model, imgs, strict=False), [])  # add model graph
+                    if kpt_label:
+                        plot_images(imgs, targets, paths, f, kpt_label=kpt_label, kpt_num=kpt_num)
+                    else:
+                        plot_images(imgs, targets, paths, f, kpt_label=kpt_label, kpt_num=0)
                 elif plots and ni == 10 and wandb_logger.wandb:
                     wandb_logger.log({"Mosaics": [wandb_logger.wandb.Image(str(x), caption=x.name) for x in
                                                   save_dir.glob('train*.jpg') if x.exists()]})
@@ -464,7 +488,8 @@ def train(hyp, opt, device, tb_writer=None):
                                           verbose=True,
                                           save_json=True,
                                           plots=False,
-                                          is_coco=is_coco)
+                                          is_coco=is_coco,
+                                          kpt_label=kpt_label)
 
         # Strip optimizers
         final = best if best.exists() else last  # final model
@@ -488,35 +513,35 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # 视觉板识别模型
-    # parser.add_argument('--weights', type=str, default='/root/autodl-tmp/pretrain_model/yolov7.pt')
+    # parser.add_argument('--weights', type=str, default='')
     # parser.add_argument('--cfg', type=str, default='cfg/board/shufflenet-0.5-board.yaml', help='model.yaml path')
-    # parser.add_argument('--data', type=str, default='data/board/board_detect.yaml', help='data.yaml path')
+    # parser.add_argument('--data', type=str, default='data/armor/armor_detect.yaml', help='data.yaml path')
     # parser.add_argument('--kpt-label', default=False, help='use keypoint labels for training')
-    # parser.add_argument('--hyp', type=str, default='data/board/hyp.board.yaml', help='hyperparameters path')
-    # parser.add_argument('--project', default='../board_det/runs/train', help='save to project/name')
+    # parser.add_argument('--hyp', type=str, default='data/armor/hyp.armor.yaml', help='hyperparameters path')
+    # parser.add_argument('--project', default='../armor_detct/runs/train', help='save to project/name')
 
     # 装甲板四点模型
 
-    parser.add_argument('--weights', type=str, default='/root/autodl-tmp/pretrain_model/yolov7-w6-pose.pt')
-    parser.add_argument('--cfg', type=str, default='cfg/armor/shufflenet-SImAM-0.5-armor.yaml', help='model.yaml path')
-    parser.add_argument('--data', type=str, default='data/armor/armor_kpt.yaml', help='data.yaml path')
-    parser.add_argument('--kpt-label', default=True, help='use keypoint labels for training')
-    parser.add_argument('--project', default='../armor_kpt/runs/train', help='save to project/name')
-    parser.add_argument('--hyp', type=str, default='data/armor/hyp.armor.yaml', help='hyperparameters path')
+    # parser.add_argument('--weights', type=str, default='../yolov7-w6-pose.pt')
+    # parser.add_argument('--cfg', type=str, default='cfg/armor/shufflenet-0.5-armor.yaml', help='model.yaml path')
+    # parser.add_argument('--data', type=str, default='data/armor/armor_kpt.yaml', help='data.yaml path')
+    # parser.add_argument('--kpt-label', default=True, help='use keypoint labels for training')
+    # parser.add_argument('--project', default='../armor_kpt/runs/train', help='save to project/name')
+    # parser.add_argument('--hyp', type=str, default='data/armor/hyp.armor.yaml', help='hyperparameters path')
 
     # 能量机关五点模型
 
-    # parser.add_argument('--weights', type=str, default='/root/autodl-tmp/pretrain_model/yolov7-w6-pose.pt')
-    # parser.add_argument('--cfg', type=str, default='cfg/win/shufflenet-SImAM-0.5-win.yaml', help='model.yaml path')
-    # parser.add_argument('--data', type=str, default='data/armor_kpt.yaml', help='data.yaml path')
-    # parser.add_argument('--kpt-label', default=True, help='use keypoint labels for training')
-    # parser.add_argument('--project', default='../win_kpt/runs/train', help='save to project/name')
-    # parser.add_argument('--hyp', type=str, default='data/board/hyp.board.yaml', help='hyperparameters path')
+    parser.add_argument('--weights', type=str, default='')
+    parser.add_argument('--cfg', type=str, default='cfg/winmill/yolov8-0.5-win.yaml', help='model.yaml path')
+    parser.add_argument('--data', type=str, default='data/winmill/win_kpt.yaml', help='data.yaml path')
+    parser.add_argument('--kpt-label', default=True, help='use keypoint labels for training')
+    parser.add_argument('--project', default='../win_kpt/runs/train', help='save to project/name')
+    parser.add_argument('--hyp', type=str, default='data/winmill/hyp.win.yaml', help='hyperparameters path')
 
     parser.add_argument('--epochs', type=int, default=300)
-    parser.add_argument('--batch-size', type=int, default=64, help='total batch size for all GPUs')
+    parser.add_argument('--batch-size', type=int, default=16, help='total batch size for all GPUs')
     parser.add_argument('--workers', type=int, default=16, help='maximum number of dataloader workers')
-    parser.add_argument('--img-size', nargs='+', type=int, default=[640, 640], help='[train, test] image sizes')
+    parser.add_argument('--img-size', nargs='+', type=int, default=[416, 416], help='[train, test] image sizes')
     parser.add_argument('--rect', action='store_true', help='rectangular training')
     parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume most recent training')
     parser.add_argument('--nosave', action='store_true', help='only save final checkpoint')
@@ -543,6 +568,9 @@ if __name__ == '__main__':
     parser.add_argument('--save_period', type=int, default=-1, help='Log model after every "save_period" epoch')
     parser.add_argument('--artifact_alias', type=str, default="latest", help='version of dataset artifact to be used')
     parser.add_argument('--freeze', type=int, default=0, help='Number of layers to freeze. backbone=10, all=24')
+    parser.add_argument('--st', action='store_true',default=False, help='train with L1 sparsity normalization')
+    parser.add_argument('--sr', type=float, default=0.0001, help='L1 normal sparse rate')
+
     opt = parser.parse_args()
 
     # Set DDP variables

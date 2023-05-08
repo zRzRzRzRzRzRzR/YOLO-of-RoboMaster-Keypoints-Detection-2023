@@ -1,0 +1,12 @@
+train: /root/autodl-tmp/XJTLU_2023_board/images/train/
+val: /root/autodl-tmp/XJTLU_2023_board/images/val/
+test: /root/autodl-tmp/XJTLU_2023_board/images/test/
+nc: 4
+names: ['BA','BD','RA','RD']
+# 蓝A 蓝D 红A 红D
+
+#train: /root/autodl-tmp/XJTLU_detect/images/train/
+#val: /root/autodl-tmp/XJTLU_detect/images/val/
+#test: /root/autodl-tmp/XJTLU_detect/images/test/
+#nc: 14
+#names: ['B1','B2','B3','B4','B5','BO','BS','R1','R2','R3','R4','R5','RO','RS']

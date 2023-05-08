@@ -2,7 +2,7 @@
 nc: 14  # number of classes
 nkpt: 4 # number of keypoints
 depth_multiple: 0.33  # model depth multiple
-width_multiple: 0.5 # layer channel multiple
+width_multiple: 0.25 # layer channel multiple
 dw_conv_kpt: True
 
 # anchors

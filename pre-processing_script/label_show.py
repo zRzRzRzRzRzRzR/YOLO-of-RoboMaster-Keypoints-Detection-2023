@@ -9,8 +9,6 @@ import argparse
 import cv2
 import random
 
-
-@staticmethod
 def plot_one_box_landmarks(x, y, img, color=None, label=None, landmarks=[], line_thickness=3):
     # Plots one bounding box on image img
     h, w, c = img.shape
@@ -41,7 +39,6 @@ def plot_one_box_landmarks(x, y, img, color=None, label=None, landmarks=[], line
         landmarkspoints.append([point_x, point_y])
 
 
-@staticmethod
 def xywh2xyxy(img, xywh):
     h, w, c = img.shape
     x = [0] * 13
@@ -55,13 +52,14 @@ def xywh2xyxy(img, xywh):
     x[3] = xywh[1] * w + 0.5 * xywh[3] * w
     y[3] = xywh[2] * h + 0.5 * xywh[4] * h
     landmarks = xywh[5:]
-    names = ['B1', 'B2', 'B3', 'B4', 'B5', 'BO', 'BS', 'R1', 'R2', 'R3', 'R4', 'R5', 'RO', 'RS']
+    # names = ['B1', 'B2', 'B3', 'B4', 'B5', 'BO', 'BS', 'R1', 'R2', 'R3', 'R4', 'R5', 'RO', 'RS']
+    names = ['BA','BD','RA','RD']
     label = f'{names[int(xywh[0])]}'
     plot_one_box_landmarks(x, y, img, color=None, label=label, landmarks=landmarks)
     return img
 
 
-@staticmethod
+
 def read_txt(txt_path):
     with open(str(txt_path), 'r', encoding='utf-8') as f:
         data = list(map(lambda x: x.rstrip('\n'), f))

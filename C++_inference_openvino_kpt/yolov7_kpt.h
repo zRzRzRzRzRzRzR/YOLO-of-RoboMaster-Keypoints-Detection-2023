@@ -5,36 +5,42 @@
 #include <string>
 #include <cmath>
 #include <cstdlib>
+#include <cassert>
+#include <cfloat>
+#include <fstream>
+#include <iostream>
+#include <memory>
+#include <sstream>
+#include <sys/types.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/dnn/dnn.hpp>
 #include <openvino/openvino.hpp>
 #include <inference_engine.hpp>
+using namespace InferenceEngine;
 
-#define NMS_THRESHOLD 0.20f //NMS参数
-#define CONF_THRESHOLD 0.70f //置信度参数
+#define NMS_THRESHOLD 0.10f //NMS参数
+#define CONF_THRESHOLD 0.40f //置信度参数
 #define CONF_REMAIN 0.0 //保留一帧保留的权重比例，如果不保留填写为0
 #define IMG_SIZE  416  //推理图像大小，如果不是640 和 416 需要自己在下面添加anchor
 #define ANCHOR 3 //anchor 数量
-#define DETECT_MODE 0 //ARMOR 0 WIN 1 BOARD 2
+#define DETECT_MODE 1 //ARMOR 0 WIN 1 BOARD 2
 #define DEVICE "CPU" // 设备选择
 #define VIDEO //是否展示推理视频
 
 #if DETECT_MODE == 0 // 装甲板四点模型
 #define KPT_NUM 4
 #define CLS_NUM 14
-//#define MODEL_PATH "/home/zr/zR/RM/yolov7_Keypoints_RM/C++_inference_openvino_kpt/demo_weight/demo.xml"
-#define MODEL_PATH "/home/zr/Downloads/best_shuffle_sim_416.onnx"
+#define MODEL_PATH "/home/knight/C++_inference_openvino_old/demo_weight/yolov8tiny.onnx"
 #elif DETECT_MODE == 1 // 能量机关五点模型
 #define KPT_NUM 5
 #define CLS_NUM 4
-#define MODEL_PATH "/home/zr/Downloads/best_win_416.onnx"
+#define MODEL_PATH  "/home/knight/C++_inference_openvino_old/demo_weight/yolov8tiny-win.onnx"
 #elif DETECT_MODE == 2 // 视觉识别版检测模型
 #define KPT_NUM 0
 #define CLS_NUM 4
 #define MODEL_PATH "/home/knight/Sharefolder_Knight/best_board_416.onnx"
 #endif
-extern float last_conf;
 class yolo_kpt {
 public:
     yolo_kpt();
@@ -61,13 +67,9 @@ public:
 
 private:
     ov::Core core;
-
     std::shared_ptr<ov::Model> model;
-
     ov::CompiledModel compiled_model;
-
     ov::InferRequest infer_request;
-
     ov::Tensor input_tensor1;
 #if DETECT_MODE == 0
     const std::vector<std::string> class_names = {

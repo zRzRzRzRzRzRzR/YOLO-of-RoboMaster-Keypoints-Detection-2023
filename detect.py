@@ -13,9 +13,9 @@ from utils.torch_utils import select_device, load_classifier, time_synchronized
 
 
 def detect(opt):
-    source, weights, view_img, save_txt, imgsz, save_txt_tidl, kpt_label = opt.source, opt.weights, opt.view_img, \
-                                                                           opt.save_txt, opt.img_size, \
-                                                                           opt.save_txt_tidl, opt.kpt_label
+    source, weights, view_img, save_txt, save_frames, imgsz, save_txt_tidl, kpt_label = opt.source, opt.weights, opt.view_img, \
+        opt.save_txt, opt.save_frames, opt.img_size, \
+        opt.save_txt_tidl, opt.kpt_label
     save_img = not opt.nosave and not source.endswith('.txt')  # save inference images
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
         ('rtsp://', 'rtmp://', 'http://', 'https://'))
@@ -23,11 +23,14 @@ def detect(opt):
     # Directories
     save_dir = increment_path(Path(opt.project) / opt.name, exist_ok=opt.exist_ok)  # increment run
     (save_dir / 'labels' if (save_txt or save_txt_tidl) else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
+    (save_dir / 'frames').mkdir(parents=True, exist_ok=True)  # make dir
 
     # Initialize
     set_logging()
     device = select_device(opt.device)
     half = device.type != 'cpu' and not save_txt_tidl  # half precision only supported on CUDA
+
+    total_frames = 0 # for save frames
 
     # Load model
     model = attempt_load(weights, map_location=device)  # load FP32 model
@@ -76,8 +79,13 @@ def detect(opt):
 
         # Apply NMS
         # print(pred[:,1], "e")
-        pred = non_max_suppression(pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms,
-                                   kpt_label=kpt_label, nc=model.yaml['nc'], nkpt=model.yaml['nkpt'])
+        if kpt_label:
+            pred = non_max_suppression(pred, opt.conf_thres, opt.iou_thres, classes=opt.classes,
+                                       agnostic=opt.agnostic_nms,
+                                       kpt_label=kpt_label, nc=model.yaml['nc'], nkpt=model.yaml['nkpt'])
+        else:
+            pred = non_max_suppression(pred, opt.conf_thres, opt.iou_thres, classes=opt.classes,
+                                       agnostic=opt.agnostic_nms, kpt_label=kpt_label, nc=model.yaml['nc'])
         t2 = time_synchronized()
         # Apply Classifier
         if classify:
@@ -97,6 +105,9 @@ def detect(opt):
             gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
             if len(det):
                 # Rescale boxes from img_size to im0 size
+                if save_frames:
+                    cv2.imwrite(str(save_dir / 'frames' / f'{total_frames}.jpg'), im0)
+                    total_frames = total_frames + 1
 
                 scale_coords(img.shape[2:], det[:, :4], im0.shape, kpt_label=False)
                 scale_coords(img.shape[2:], det[:, 6:], im0.shape, kpt_label=kpt_label, step=3)
@@ -118,10 +129,12 @@ def detect(opt):
                         c = int(cls)  # integer class
                         label = None if opt.hide_labels else (names[c] if opt.hide_conf else f'{names[c]} {conf:.2f}')
                         kpts = det[det_index, 6:]
-                        plot_one_box(xyxy, im0, label=label, color=colors(c, True), line_thickness=1, kpts=kpts,
+                        if c ==0:
+                            plot_one_box(xyxy, im0, label=label, color=colors(c, True), line_thickness=1, kpts=kpts,
                                      steps=3)
                         if opt.save_crop:
                             save_one_box(xyxy, im0s, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
+
             # Print time (inference + NMS)
             # print(f'{s}Done. ({t2 - t1:.3f}s)')
             # Stream results
@@ -157,14 +170,16 @@ def detect(opt):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', nargs='+', type=str, default='/root/autodl-tmp/yolo_kpt/runs/train/exp2/weights/best.pt', help='model.pt path(s)')
-    parser.add_argument('--source', type=str, default='/root/autodl-tmp/test_videos/test_for_kpt/cut3.avi', help='source')
-    parser.add_argument('--img-size', nargs='+', type=int, default=640, help='inference size (pixels)')
-    parser.add_argument('--conf-thres', type=float, default=0.8, help='object confidence threshold')
-    parser.add_argument('--iou-thres', type=float, default=0.2, help='IOU threshold for NMS')
+    parser.add_argument('--weights', nargs='+', type=str,
+                        default='../win_kpt/runs/train/exp/weights/best.pt',help='model.pt path(s)')
+    parser.add_argument('--source', type=str, default='/media/zr/Data/RoboMaster_data/record/red-win.MP4', help='source')
+    parser.add_argument('--img-size', nargs='+', type=int, default=416, help='inference size (pixels)')
+    parser.add_argument('--conf-thres', type=float, default=0.5, help='object confidence threshold')
+    parser.add_argument('--iou-thres', type=float, default=0.4, help='IOU threshold for NMS')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--view-img', action='store_true', help='display results')
     parser.add_argument('--save-txt', action='store_true', help='save results to *.txt')
+    parser.add_argument('--save-frames', action='store_true', help='save detect frames to *.jpg')
     parser.add_argument('--save-txt-tidl', action='store_true', help='save results to *.txt in tidl format')
     parser.add_argument('--save-bin', action='store_true', help='save base n/w outputs in raw bin format')
     parser.add_argument('--save-conf', action='store_true', help='save confidences in --save-txt labels')
@@ -173,7 +188,7 @@ if __name__ == '__main__':
     parser.add_argument('--classes', nargs='+', type=int, help='filter by class: --class 0, or --class 0 2 3')
     parser.add_argument('--agnostic-nms', action='store_true', help='class-agnostic NMS')
     parser.add_argument('--augment', action='store_true', help='augmented inference')
-    parser.add_argument('--project', default='/root/autodl-tmp/yolo_kpt/runs/detect', help='save results to project/name')
+    parser.add_argument('--project', default='../win_kpt/runs/detect', help='save to project/name')
     parser.add_argument('--name', default='exp', help='save results to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     parser.add_argument('--line-thickness', default=3, type=int, help='bounding box thickness (pixels)')

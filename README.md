@@ -147,8 +147,8 @@
 ***
 |编号 | 含义 | 序号 |编号 | 含义 | 序号 |
 |-|-|-|-|-|-|
-| RA | 红方A识别板 | 0 | BR | 蓝方A识别板 | 2 |
-| RD | 红方D识别板 | 1 | BW | 蓝方D识别板 | 3 |
+| BA | 蓝方A识别板 | 0 | RA | 红方A识别板 | 2 |
+| BD | 蓝方D识别板 | 1 | RD | 红方D识别板 | 3 |
 
 **```注意```** 图片和标注的文件名必须完全相同。
 
@@ -164,11 +164,11 @@
 
 #### Single GPU:
 
-```python train.py --workers 8 --device 0 --batch-size 32 --data data/armor/armor_detect.yaml --img 640 640 --cfg cfg/armor/yolov7_0.5_armor.yaml --weights 'yolov7.pt' --name yolov7 --hyp data/hyp.armor.yaml ```
+```python train.py --workers 8 --device 0 --batch-size 32 --data data/armor/armor_detect.yaml --img 640 640 --cfg cfg/armor/yolov8-0.5-SimAM-armor.yaml --weights 'yolov7.pt' --name yolov7 --hyp data/hyp.armor.yaml ```
 
 #### Muti GPUs:
 
-``` python -m torch.distributed.launch --nproc_per_node 8 train.py --workers 96 --batch-size 256 --data data/armor/armor_detect.yaml --img 640 640 -cfg cfg/armor/yolov7_0.5_armor.yaml --weights 'yolov7.pt' --name yolov7 --hyp data/hyp.armor.yaml```
+``` python -m torch.distributed.launch --nproc_per_node 8 train.py --workers 96 --batch-size 256 --data data/armor/armor_detect.yaml --img 640 640 -cfg cfg/armor/yolov8-0.5-SimAM-armor.yaml --weights 'yolov7.pt' --name yolov7 --hyp data/hyp.armor.yaml```
 
 ### Inference:
 
@@ -197,33 +197,6 @@
 
 + Openvino推理代码位于文件夹 ```C++_inference_openvino_kpt``` 中，仅做简单推理，请根据需求自行接入工程。
 + 如果推理图像修改，工程中的anchor和图像大小也需要修改，anchor修改请执行```pre-processing_script/change_anchor.py```
-
-### 测试过的网络和表现
-
-+ 推理设备为 Inter NUC 11代集成显卡，更多硬件参数详见``` C++_inference_openvino_kpt```介绍。
-+ 本表格中的所有的推理均在 FP32 精度下进行。控制IOU参数为``` 0.6```, NMS参数为``` 0.2 ```。
-+ 本表格中所有的训练图像大小为 640 x 640 , 推理图像大小为 416 x 416
-+ 本表格中所有的网络的```depth_multiple```默认为0.33.```width_multiple```默认为0.5，所有测试模式均为 __ARMOR__
-  。使用的训练配置文件也为 __ARMOR__。
-+ 由于三种模式的底层原理相近，使用场景也相近，我们团队认为，仅需在其中一种模式找到最佳方案便可直接适用于其他两种模式。
-+ 表格中的符号表示如下：
-    + ``` \ ``` 符号表表示 未测试 / 无法测试 /
-      没有测试必要（由于队伍的推理框架由Openvino转向了TensorRT，大部分算法实验不在测试Openvino独显性能)
-    + ``` ? ``` 未测试。
-    + ```[]```  替代标准 yolov7 模块的位置 ，例如 ``` [3]```代表将第三个标准C2f模块更换为指定模块。
-
-#### Performance
-
-由于yolov8的性能表现目前暂时没有团队修改过的yolov7效果更好，
-
-| 主干网络 | KPTLOSS | IOU | Head | 训练轮次 | | mAP@.5| mAP@.5:.95 | 参数量 | OpenVINO FPS |
-|-|-|-|-|-|-|-|-|-|-|-|
-| C2f | oks | CIOU | C2f | 300 | 0.973 | 0.752 | 165MB | 56 |  
-| ELAN | oks | CIOU | ELAN | 300 | 0.910 | 0.684 | 9.4MB | 72 |
-| MobileOne | oks | CIOU | C2f | 300 | 0.841 | 0.610 | 16.9MB | 70 |
-| Shuffle | oks | CIOU | C2f | 300 | 0.900 | 0.670 | 21.9MB | 79 |
-| Shuffle | oks | CIOU | C2f + SimAM | 300 | 0.921 | 0.699 | 21.9MB | 79 |
-| Shuffle(0.25 width_multiple)   | oks | CIOU | C2f + SimAM | 300 | 0.841 | 0.540 | 1.1MB | 121 |
 
 ## 总结
 

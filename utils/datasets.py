@@ -172,7 +172,7 @@ class LoadImages:  # for inference
                     ret_val, img0 = self.cap.read()
 
             self.frame += 1
-            print(f'video {self.count + 1}/{self.nf} ({self.frame}/{self.nframes}) {path}: ', end='')
+            # print(f'video {self.count + 1}/{self.nf} ({self.frame}/{self.nframes}) {path}: ', end='\n')
 
         else:
             # Read image
@@ -347,7 +347,7 @@ def img2label_paths(img_paths):
 class LoadImagesAndLabels(Dataset):  # for training/testing
     def __init__(self, path, img_size=640, batch_size=16, augment=False, hyp=None, rect=False, image_weights=False,
                  cache_images=False, single_cls=False, stride=32, pad=0.0, prefix='', square=False, tidl_load=False,
-                 kpt_label=True, kpt_num=4):
+                 kpt_label=False, kpt_num=4):
         self.img_size = img_size
         self.augment = augment
         self.hyp = hyp
@@ -491,11 +491,13 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                     nf += 1  # label found
                     with open(lb_file, 'r') as f:
                         l = [x.split() for x in f.read().strip().splitlines()]
-                        if any([len(x) > 8 for x in l]) and not kpt_label:  # is segment
-                            classes = np.array([x[0] for x in l], dtype=np.float32)
-                            segments = [np.array(x[1:], dtype=np.float32).reshape(-1, 2) for x in l]  # (cls, xy1...)
-                            l = np.concatenate((classes.reshape(-1, 1), segments2boxes(segments)), 1)  # (cls, xywh)
+                        # if any([len(x) > 8 for x in l]) and not kpt_label:  # 我们的场景没有分割，这里注释掉，不然影响逻辑
+                            # classes = np.array([x[0] for x in l], dtype=np.float32)
+                            # segments = [np.array(x[1:], dtype=np.float32).reshape(-1, 2) for x in l]  # (cls, xy1...)
+                            # l = np.concatenate((classes.reshape(-1, 1), segments2boxes(segments)), 1)  # (cls, xywh)
                         l = np.array(l, dtype=np.float32)
+                        if not kpt_label:
+                            l = l[:, :5]
                     if len(l):
                         assert (l >= 0).all(), 'negative labels'
                         if kpt_label:
@@ -505,14 +507,14 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                             assert (l[:, 6::2] <= 1).all(), 'non-normalized or out of bounds coordinate labels'
                             assert l.shape[1] == 5 + 2 * self.kpt_num, 'labels require 39 columns each after removing occlusion paramater'
                         else:
+
                             assert l.shape[1] == 5, 'labels require 5 columns each'
                             assert (l[:, 1:5] <= 1).all(), 'non-normalized or out of bounds coordinate labels'
 
                         assert np.unique(l, axis=0).shape[0] == l.shape[0], 'duplicate labels'
                     else:
                         ne += 1  # label empty
-                        l = np.zeros((0, 5 + 2 * self.kpt_num), dtype=np.float32) if kpt_label else np.zeros((0, 5),
-                                                                                                             dtype=np.float32)
+                        l = np.zeros((0, 5 + 2 * self.kpt_num), dtype=np.float32) if kpt_label else np.zeros((0, 5), dtype=np.float32)
 
                 else:
                     nm += 1  # label missing
@@ -611,7 +613,6 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             if self.kpt_label:
                 labels[:, 6::2] /= img.shape[0]  # normalized kpt heights 0-1
                 labels[:, 5::2] /= img.shape[1]  # normalized kpt width 0-1
-
         if self.augment:
             # flip up-down
             if random.random() < hyp['flipud']:

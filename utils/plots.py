@@ -72,11 +72,11 @@ def plot_one_box(x, img, color=None, label=None, line_thickness=3, kpts=None, st
     color = color or [random.randint(0, 255) for _ in range(3)]
     c1, c2 = (int(x[0]), int(x[1])), (int(x[2]), int(x[3]))
     cv2.rectangle(img, c1, c2, color, thickness=tl, lineType=cv2.LINE_AA)
+    # cv2.circle(img, (int(c1[0] + (c2[0] - c1[0]) / 2), int(c1[1] + (c2[1] - c1[1]) / 2)), tl + 2, color, -1)
     if label:
         tf = max(tl - 1, 1)  # font thickness
         t_size = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=tf)[0]
         c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
-        cv2.rectangle(img, c1, c2, color, -1, cv2.LINE_AA)  # filled
         cv2.putText(img, label, (c1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
 
     if kpts is None:
@@ -93,9 +93,9 @@ def plot_one_box(x, img, color=None, label=None, line_thickness=3, kpts=None, st
                     continue
             # 如果点无穷大 直接绘制在 原点
             try:
-                cv2.circle(img, (int(x_coord), int(y_coord)), tl + 2, color, -1)
+                cv2.circle(img, (int(x_coord), int(y_coord)), tl + 3, color, -1)
             except:
-                cv2.circle(img, (int(0), int(0)), tl + 2, color, -1)
+                cv2.circle(img, (int(0), int(0)), tl + 5, color, -1)
 
 def plot_one_box_PIL(box, im, color=None, label=None, line_thickness=None):
     # Plots one bounding box on image 'im' using PIL
@@ -144,7 +144,7 @@ def output_to_target(output):
 
 
 def plot_images(images, targets, paths=None, fname='images.jpg', names=None, max_size=640, max_subplots=16,
-                kpt_label=True, kpt_num=17, steps=2, orig_shape=None):
+                kpt_label=False, kpt_num=4, steps=2, orig_shape=None):
     # Plot image grid with labels
 
     if isinstance(images, torch.Tensor):
