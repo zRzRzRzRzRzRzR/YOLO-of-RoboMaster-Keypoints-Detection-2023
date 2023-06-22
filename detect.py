@@ -172,7 +172,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', nargs='+', type=str,
                         default='../win_kpt/runs/train/exp/weights/best.pt',help='model.pt path(s)')
-    parser.add_argument('--source', type=str, default='/media/zr/Data/RoboMaster_data/record/red-win.MP4', help='source')
+    parser.add_argument('--source', type=str, default='/media/zr/Data/Sharefolder_zR_PC/output.mp4', help='source')
     parser.add_argument('--img-size', nargs='+', type=int, default=416, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.5, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.4, help='IOU threshold for NMS')

@@ -1,11 +1,5 @@
-train: /media/zr/Data/RoboMaster_data/Smart_Car_1/images/train/
-val: /media/zr/Data/RoboMaster_data/Smart_Car_1/images/val/
-test: /media/zr/Data/RoboMaster_data/Smart_Car_1/images/test/
-nc: 28
-names: ['Plant_Corn_1', 'Plant_Corn_2', 'Plant_Corn_3', 'Plant_Corn_4',
-'Plant_Cucumber_1', 'Plant_Cucumber_2', 'Plant_Cucumber_3', 'Plant_Cucumber_4',
-'Plant_Rice_1', 'Plant_Rice_2', 'Plant_Rice_3', 'Plant_Rice_4',
-'Plant_Wheat_1', 'Plant_Wheat_2', 'Plant_Wheat_3', 'Plant_Wheat_4',
-'Fruit_Corn_1', 'Fruit_Corn_2', 'Fruit_Corn_3', 'Fruit_Corn_4',
-'Fruit_Cucumber_1', 'Fruit_Cucumber_2', 'Fruit_Cucumber_3', 'Fruit_Cucumber_4',
-'Fruit_Watermelon_1', 'Fruit_Watermelon_2', 'Fruit_Watermelon_3', 'Fruit_Watermelon_4']
+train: /media/zr/Data/RoboMaster_data/dataset/XJTLU_detect/images/train/
+val: /media/zr/Data/RoboMaster_data/dataset/XJTLU_detect/images/val/
+test:
+nc: 14
+names: ['B1','B2','B3','B4','B5','BO','BS','R1','R2','R3','R4','R5','RO','RS']

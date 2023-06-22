@@ -1,6 +1,5 @@
-train: /media/zr/Data/RoboMaster_data/dataset/XJTLU_WIN
-val: /media/zr/Data/RoboMaster_data/dataset/XJTLU_WIN
-test: /media/zr/Data/RoboMaster_data/dataset/XJTLU_WIN
+train: /media/zr/Data/RoboMaster_data/dataset/XJTLU_WIN/images/train/
+val: /media/zr/Data/RoboMaster_data/dataset/XJTLU_WIN/images/train/
 nc: 4
 names: ['RR','RW','BR','BW']
 # 红Right(正确打击) 红 Wrong(已经打击) 蓝 Right(正确打击) 蓝 Wrong(已经打击)

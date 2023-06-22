@@ -1,5 +1,5 @@
-train: /media/zr/Data/RoboMaster_data/dataset/XJTLU_2022_keypoints/images/train/
-val: /media/zr/Data/RoboMaster_data/dataset/XJTLU_2022_keypoints/images/val/
-test: /media/zr/Data/RoboMaster_data/dataset/XJTLU_2022_keypoints/images/test/
+train: /media/zr/Data/RoboMaster_data/dataset/XJTLU_detect/images/train/images/train/
+val: /media/zr/Data/RoboMaster_data/dataset/XJTLU_detect/images/val/images/train/
+test:
 nc: 14
 names: ['B1','B2','B3','B4','B5','BO','BS','R1','R2','R3','R4','R5','RO','RS']

@@ -91,11 +91,13 @@ def plot_one_box(x, img, color=None, label=None, line_thickness=3, kpts=None, st
                 conf = kpts[steps * kid + 2]
                 if conf < 0.5:
                     continue
+
             # 如果点无穷大 直接绘制在 原点
             try:
-                cv2.circle(img, (int(x_coord), int(y_coord)), tl + 3, color, -1)
+                cv2.circle(img, (int(x_coord), int(y_coord)), tl + 3, (255, 255, 255) if kid == 2 else color, -1)
             except:
                 cv2.circle(img, (int(0), int(0)), tl + 5, color, -1)
+
 
 def plot_one_box_PIL(box, im, color=None, label=None, line_thickness=None):
     # Plots one bounding box on image 'im' using PIL
@@ -222,7 +224,8 @@ def plot_images(images, targets, paths=None, fname='images.jpg', names=None, max
                 if labels or conf[j] > 0.1:  # 0.25 conf thresh
                     label = '%s' % cls if labels else '%s %.1f' % (cls, conf[j])
                     if kpt_label:
-                        plot_one_box(box, mosaic, label=label, color=color, line_thickness=tl, kpts=kpts[:, j], steps=steps)
+                        plot_one_box(box, mosaic, label=label, color=color, line_thickness=tl, kpts=kpts[:, j],
+                                     steps=steps)
                     else:
                         plot_one_box(box, mosaic, label=label, color=color, line_thickness=tl)
         # Draw image filename labels

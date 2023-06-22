@@ -25,21 +25,21 @@ using namespace InferenceEngine;
 #define IMG_SIZE  416  //推理图像大小，如果不是640 和 416 需要自己在下面添加anchor
 #define ANCHOR 3 //anchor 数量
 #define DETECT_MODE 1 //ARMOR 0 WIN 1 BOARD 2
-#define DEVICE "CPU" // 设备选择
+#define DEVICE "GPU" // 设备选择
 #define VIDEO //是否展示推理视频
 
 #if DETECT_MODE == 0 // 装甲板四点模型
 #define KPT_NUM 4
 #define CLS_NUM 14
-#define MODEL_PATH "/home/knight/C++_inference_openvino_old/demo_weight/yolov8tiny.onnx"
+#define MODEL_PATH ""
 #elif DETECT_MODE == 1 // 能量机关五点模型
 #define KPT_NUM 5
 #define CLS_NUM 4
-#define MODEL_PATH  "/home/knight/C++_inference_openvino_old/demo_weight/yolov8tiny-win.onnx"
+#define MODEL_PATH  ""
 #elif DETECT_MODE == 2 // 视觉识别版检测模型
 #define KPT_NUM 0
 #define CLS_NUM 4
-#define MODEL_PATH "/home/knight/Sharefolder_Knight/best_board_416.onnx"
+#define MODEL_PATH ""
 #endif
 class yolo_kpt {
 public:

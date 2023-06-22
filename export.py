@@ -17,11 +17,12 @@ from utils.torch_utils import select_device
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', type=str, default='../win_kpt/runs/train/exp2/weights/best.pt', help='weights path')
+    parser.add_argument('--weights', type=str, default='../armor_detct_new/runs/train/exp/weights/best.pt', help='weights path')
+    # parser.add_argument('--weights', type=str, default='../win_kpt/runs/train/exp/weights/best.pt', help='weights path')
     parser.add_argument('--img-size', nargs='+', type=int, default=[416, 416], help='image size')  # height, width
     parser.add_argument('--batch-size', type=int, default=1, help='batch size')
     parser.add_argument('--grid', action='store_true', help='export Detect() layer grid')
-    parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
+    parser.add_argument('--device', default='1', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--dynamic', action='store_true', help='dynamic ONNX axes')  # ONNX-only
     parser.add_argument('--simplify', type=bool, default=True, help='simplify ONNX model')  # ONNX-only
     parser.add_argument('--export-nms', action='store_true',

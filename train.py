@@ -513,12 +513,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # 视觉板识别模型
-    # parser.add_argument('--weights', type=str, default='')
-    # parser.add_argument('--cfg', type=str, default='cfg/board/shufflenet-0.5-board.yaml', help='model.yaml path')
-    # parser.add_argument('--data', type=str, default='data/armor/armor_detect.yaml', help='data.yaml path')
-    # parser.add_argument('--kpt-label', default=False, help='use keypoint labels for training')
-    # parser.add_argument('--hyp', type=str, default='data/armor/hyp.armor.yaml', help='hyperparameters path')
-    # parser.add_argument('--project', default='../armor_detct/runs/train', help='save to project/name')
+    parser.add_argument('--weights', type=str, default='')
+    parser.add_argument('--cfg', type=str, default='cfg/armor/shufflenet-0.5-armor.yaml', help='model.yaml path')
+    parser.add_argument('--data', type=str, default='data/armor/armor_detect.yaml', help='data.yaml path')
+    parser.add_argument('--kpt-label', default=False, help='use keypoint labels for training')
+    parser.add_argument('--hyp', type=str, default='data/armor/hyp.armor.yaml', help='hyperparameters path')
+    parser.add_argument('--project', default='../armor_detct_new/runs/train', help='save to project/name')
+
 
     # 装甲板四点模型
 
@@ -530,17 +531,17 @@ if __name__ == '__main__':
     # parser.add_argument('--hyp', type=str, default='data/armor/hyp.armor.yaml', help='hyperparameters path')
 
     # 能量机关五点模型
-
-    parser.add_argument('--weights', type=str, default='')
-    parser.add_argument('--cfg', type=str, default='cfg/winmill/yolov8-0.5-win.yaml', help='model.yaml path')
-    parser.add_argument('--data', type=str, default='data/winmill/win_kpt.yaml', help='data.yaml path')
-    parser.add_argument('--kpt-label', default=True, help='use keypoint labels for training')
-    parser.add_argument('--project', default='../win_kpt/runs/train', help='save to project/name')
-    parser.add_argument('--hyp', type=str, default='data/winmill/hyp.win.yaml', help='hyperparameters path')
+    #
+    # parser.add_argument('--weights', type=str, default='')
+    # parser.add_argument('--cfg', type=str, default='cfg/winmill/shufflenet-0.5-win.yaml', help='model.yaml path')
+    # parser.add_argument('--data', type=str, default='data/winmill/win_kpt.yaml', help='data.yaml path')
+    # parser.add_argument('--kpt-label', default=True, help='use keypoint labels for training')
+    # parser.add_argument('--project', default='../win_kpt/runs/train', help='save to project/name')
+    # parser.add_argument('--hyp', type=str, default='data/winmill/hyp.win.yaml', help='hyperparameters path')
 
     parser.add_argument('--epochs', type=int, default=300)
-    parser.add_argument('--batch-size', type=int, default=16, help='total batch size for all GPUs')
-    parser.add_argument('--workers', type=int, default=16, help='maximum number of dataloader workers')
+    parser.add_argument('--batch-size', type=int, default=256, help='total batch size for all GPUs')
+    parser.add_argument('--workers', type=int, default=8, help='maximum number of dataloader workers')
     parser.add_argument('--img-size', nargs='+', type=int, default=[416, 416], help='[train, test] image sizes')
     parser.add_argument('--rect', action='store_true', help='rectangular training')
     parser.add_argument('--resume', nargs='?', const=True, default=False, help='resume most recent training')
