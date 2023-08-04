@@ -1,5 +1,5 @@
-train: /media/zr/Data/RoboMaster_data/dataset/XJTLU_detect/images/train/
-val: /media/zr/Data/RoboMaster_data/dataset/XJTLU_detect/images/val/
+train: /home/zr/Dataset/XJTLU_detect/images/train/
+val:  /home/zr/Dataset/XJTLU_detect/images/val/
 test:
 nc: 14
 names: ['B1','B2','B3','B4','B5','BO','BS','R1','R2','R3','R4','R5','RO','RS']

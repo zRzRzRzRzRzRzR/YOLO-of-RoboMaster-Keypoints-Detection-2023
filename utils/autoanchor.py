@@ -3,13 +3,14 @@
 import numpy as np
 import torch
 import yaml
+from scipy.cluster.vq import kmeans
 from tqdm import tqdm
 
 from utils.general import colorstr
 
 
 def check_anchor_order(m):
-    # Check anchor order against stride order for YOLOv5 Detect() module m, and correct if necessary
+    # Check anchor order against stride order for YOLO Detect() module m, and correct if necessary
     a = m.anchor_grid.prod(-1).view(-1)  # anchor area
     da = a[-1] - a[0]  # delta a
     ds = m.stride[-1] - m.stride[0]  # delta s
@@ -50,15 +51,15 @@ def check_anchors(dataset, model, thr=4.0, imgsz=640):
         if new_bpr > bpr:  # replace anchors
             anchors = torch.tensor(anchors, device=m.anchors.device).type_as(m.anchors)
             m.anchor_grid[:] = anchors.clone().view_as(m.anchor_grid)  # for inference
-            m.anchors[:] = anchors.clone().view_as(m.anchors) / m.stride.to(m.anchors.device).view(-1, 1, 1)  # loss
             check_anchor_order(m)
+            m.anchors[:] = anchors.clone().view_as(m.anchors) / m.stride.to(m.anchors.device).view(-1, 1, 1)  # loss
             print(f'{prefix}New anchors saved to model. Update model *.yaml to use these anchors in the future.')
         else:
             print(f'{prefix}Original anchors better than new anchors. Proceeding with original anchors.')
     print('')  # newline
 
 
-def kmean_anchors(path='./data/coco128.yaml', n=9, img_size=640, thr=4.0, gen=1000, verbose=True):
+def kmean_anchors(path='./data/coco.yaml', n=9, img_size=640, thr=4.0, gen=1000, verbose=True):
     """ Creates kmeans-evolved anchors from training dataset
 
         Arguments:
@@ -75,8 +76,6 @@ def kmean_anchors(path='./data/coco128.yaml', n=9, img_size=640, thr=4.0, gen=10
         Usage:
             from utils.autoanchor import *; _ = kmean_anchors()
     """
-    from scipy.cluster.vq import kmeans
-
     thr = 1. / thr
     prefix = colorstr('autoanchor: ')
 
@@ -103,7 +102,7 @@ def kmean_anchors(path='./data/coco128.yaml', n=9, img_size=640, thr=4.0, gen=10
 
     if isinstance(path, str):  # *.yaml file
         with open(path) as f:
-            data_dict = yaml.safe_load(f)  # model dict
+            data_dict = yaml.load(f, Loader=yaml.SafeLoader)  # model dict
         from utils.datasets import LoadImagesAndLabels
         dataset = LoadImagesAndLabels(data_dict['train'], augment=True, rect=True)
     else:

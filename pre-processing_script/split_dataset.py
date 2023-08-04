@@ -104,8 +104,8 @@ def split_label(dataset_all_path, dataset_split_path, train_percent=0.85, val_pe
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--all_dir', type=str, default='/media/zr/Data/RoboMaster_data/dataset/XJTLU_2023_Detection_ALL/', help='Location of the original all datasets')
-    parser.add_argument('--split_dir', type=str, default='/media/zr/Data/RoboMaster_data/dataset/XJTLU_detect/', help='Output location of the split dataset')
+    parser.add_argument('--all_dir', type=str, default='/home/zr/Dataset/XJTLU_2023_Detection_ALL', help='Location of the original all datasets')
+    parser.add_argument('--split_dir', type=str, default='/home/zr/Dataset/XJTLU_detect/', help='Output location of the split dataset')
     parser.add_argument('--train_percent', type=float, default=0.9, help='train dataset percent')
     parser.add_argument('--val_percent', type=float, default=0.1, help='val dataset percent')
     parser.add_argument('--test_mode', action='store_true', help='split test dataset')

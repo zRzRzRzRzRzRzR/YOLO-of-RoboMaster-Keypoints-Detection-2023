@@ -55,7 +55,7 @@ def check_wandb_resume(opt):
 
 def process_wandb_config_ddp_mode(opt):
     with open(opt.data) as f:
-        data_dict = yaml.safe_load(f)  # data dict
+        data_dict = yaml.load(f, Loader=yaml.SafeLoader)  # data dict
     train_dir, val_dir = None, None
     if isinstance(data_dict['train'], str) and data_dict['train'].startswith(WANDB_ARTIFACT_PREFIX):
         api = wandb.Api()
@@ -73,7 +73,7 @@ def process_wandb_config_ddp_mode(opt):
     if train_dir or val_dir:
         ddp_data_path = str(Path(val_dir) / 'wandb_local_data.yaml')
         with open(ddp_data_path, 'w') as f:
-            yaml.safe_dump(data_dict, f)
+            yaml.dump(data_dict, f)
         opt.data = ddp_data_path
 
 
@@ -94,7 +94,7 @@ class WandbLogger():
         elif self.wandb:
             self.wandb_run = wandb.init(config=opt,
                                         resume="allow",
-                                        project='YOLOv5' if opt.project == 'runs/train' else Path(opt.project).stem,
+                                        project='YOLOR' if opt.project == 'runs/train' else Path(opt.project).stem,
                                         name=name,
                                         job_type=job_type,
                                         id=run_id) if not wandb.run else wandb.run
@@ -110,17 +110,17 @@ class WandbLogger():
                 self.data_dict = self.check_and_upload_dataset(opt)
         else:
             prefix = colorstr('wandb: ')
-            print(f"{prefix}Install Weights & Biases for YOLOv5 logging with 'pip install wandb' (recommended)")
+            print(f"{prefix}Install Weights & Biases for YOLOR logging with 'pip install wandb' (recommended)")
 
     def check_and_upload_dataset(self, opt):
         assert wandb, 'Install wandb to upload dataset'
         check_dataset(self.data_dict)
         config_path = self.log_dataset_artifact(opt.data,
                                                 opt.single_cls,
-                                                'YOLOv5' if opt.project == 'runs/train' else Path(opt.project).stem)
+                                                'YOLOR' if opt.project == 'runs/train' else Path(opt.project).stem)
         print("Created dataset config file ", config_path)
         with open(config_path) as f:
-            wandb_data_dict = yaml.safe_load(f)
+            wandb_data_dict = yaml.load(f, Loader=yaml.SafeLoader)
         return wandb_data_dict
 
     def setup_training(self, opt, data_dict):
@@ -192,13 +192,13 @@ class WandbLogger():
 
     def log_dataset_artifact(self, data_file, single_cls, project, overwrite_config=False):
         with open(data_file) as f:
-            data = yaml.safe_load(f)  # data dict
+            data = yaml.load(f, Loader=yaml.SafeLoader)  # data dict
         nc, names = (1, ['item']) if single_cls else (int(data['nc']), data['names'])
         names = {k: v for k, v in enumerate(names)}  # to index dictionary
         self.train_artifact = self.create_dataset_table(LoadImagesAndLabels(
-            data['train'], rect=True, batch_size=1), names, name='train') if data.get('train') else None
+            data['train']), names, name='train') if data.get('train') else None
         self.val_artifact = self.create_dataset_table(LoadImagesAndLabels(
-            data['val'], rect=True, batch_size=1), names, name='val') if data.get('val') else None
+            data['val']), names, name='val') if data.get('val') else None
         if data.get('train'):
             data['train'] = WANDB_ARTIFACT_PREFIX + str(Path(project) / 'train')
         if data.get('val'):
@@ -206,7 +206,7 @@ class WandbLogger():
         path = data_file if overwrite_config else '_wandb.'.join(data_file.rsplit('.', 1))  # updated data.yaml path
         data.pop('download', None)
         with open(path, 'w') as f:
-            yaml.safe_dump(data, f)
+            yaml.dump(data, f)
 
         if self.job_type == 'Training':  # builds correct artifact pipeline graph
             self.wandb_run.use_artifact(self.val_artifact)
@@ -243,12 +243,16 @@ class WandbLogger():
         table = wandb.Table(columns=["id", "train_image", "Classes", "name"])
         class_set = wandb.Classes([{'id': id, 'name': name} for id, name in class_to_id.items()])
         for si, (img, labels, paths, shapes) in enumerate(tqdm(dataset)):
+            height, width = shapes[0]
+            labels[:, 2:] = (xywh2xyxy(labels[:, 2:].view(-1, 4))) * torch.Tensor([width, height, width, height])
             box_data, img_classes = [], {}
-            for cls, *xywh in labels[:, 1:].tolist():
+            for cls, *xyxy in labels[:, 1:].tolist():
                 cls = int(cls)
-                box_data.append({"position": {"middle": [xywh[0], xywh[1]], "width": xywh[2], "height": xywh[3]},
+                box_data.append({"position": {"minX": xyxy[0], "minY": xyxy[1], "maxX": xyxy[2], "maxY": xyxy[3]},
                                  "class_id": cls,
-                                 "box_caption": "%s" % (class_to_id[cls])})
+                                 "box_caption": "%s" % (class_to_id[cls]),
+                                 "scores": {"acc": 1},
+                                 "domain": "pixel"})
                 img_classes[cls] = class_to_id[cls]
             boxes = {"ground_truth": {"box_data": box_data, "class_labels": class_to_id}}  # inference-space
             table.add_data(si, wandb.Image(paths, classes=class_set, boxes=boxes), json.dumps(img_classes),
