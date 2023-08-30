@@ -26,8 +26,8 @@ def rename(path, start_id):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path_dir', type=str, default='/media/zr/Data/RoboMaster_data/RMvideos/radar_record_2023/pic', help='Location of path')
-    parser.add_argument('--start_id', type=int, default=6300, help='start sort with the id')
+    parser.add_argument('path_dir', type=str, default='', help='Location of path')
+    parser.add_argument('--start_id', type=int, default=1, help='start sort with the id')
     args = parser.parse_args()
     rename(args.path_dir, args.start_id)
     print("Finish Rename!")

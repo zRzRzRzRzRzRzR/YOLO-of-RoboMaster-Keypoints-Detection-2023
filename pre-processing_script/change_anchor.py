@@ -14,6 +14,6 @@ import sys
 sys.path.append('./')
 import utils.autoanchor as autoAC
 
-new_anchors = autoAC.kmean_anchors('../data/winmill/win_kpt.yaml', 9, 416, 5.0, 1000, True)
+new_anchors = autoAC.kmean_anchors('/root/Yolov7_radar/data/armor-2.yaml', 24, 1280, 5.0, 1000, True)
 print("生成的anchor如下:")
 print(new_anchors)

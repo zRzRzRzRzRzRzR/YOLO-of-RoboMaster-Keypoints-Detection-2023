@@ -2,55 +2,41 @@
 使用前必看:
 1. 如果你是按照READ.md文档的顺序标注的，那么正常你是用不到这个文件的。如果你是从其他开源站获得的数据，由于标签不对需要更改标签，那么你可以使用这
 个脚本帮助修改。
-2.使用本脚本前请备份你的标注文件。
+2.使用本脚本前请备份你的标注文件。下面的样例是将以YOLO格式导出的LabelStudio数据集转换为西浦GMaster训练的数据集
 '''
 import os
 import argparse
 
 
-def change_label_name(path):
-    total_txt = os.listdir(path)
-    for file in total_txt:
-        file_name = path + '/' + file
-        file = open(file_name, 'r')
-        lines = file.readlines()
-        for index, line in enumerate(lines):
-            t = lines[index]  # 读取当前行的内容
-            num = int(t[0:2])
+def update_labels(folder_path):
+    # 你的旧的和新的类别顺序
+    old_order = ["B1", "B2", "B3", "B4", "B5", "BB", "BO", "BS", "R1", "R2", "R3", "R4", "R5", "RB", "RO", "RS"]
+    new_order = ["B1", "B2", "B3", "B4", "B5", "BO", "BS", "R1", "R2", "R3", "R4", "R5", "RO", "RS", "BB", "RB"]
 
-            # # 在这里修改你想txt操作的内容
-            # if num > 7 and num < 10:
-            #     t = str(num - 1) + t[1:]  # 改成2加字符第二位往后
-            #     lines[index] = t  # 改写lines中的内容
-            if num == 1:
-                t = str(0) + t[1:]  # 改成2加字符第二位往后
-                lines[index] = t  # 改写lines中的内容
-            if num == 8:
-                t = str(1) + t[1:]  # 改成2加字符第二位往后
-                lines[index] = t  # 改写lines中的内容
-            #
-            # if num != 15:  # 切片判断前两个字符
-            #     t = ''
-            # lines[index] = t
-            #
-            # if num > 10:  # 切片判断前两个字符
-            #     t = str(num - 1) + t[2:]
-            #     lines[index] = t
+    # 创建一个字典来映射旧的id到新的id
+    id_mapping = {old_order.index(name): new_order.index(name) for name in old_order}
 
-            # if num !=1 and num!=8:
-            #     t = ''
-            #     lines[index] = t
+    # 遍历标签文件
+    for root, dirs, files in os.walk(folder_path):
+        for file in files:
+            if file.endswith(".txt"):  # 假设标签文件是.txt格式
+                with open(os.path.join(root, file), "r") as f:
+                    lines = f.readlines()
 
-        file.close()
-        t = "".join(lines)
-        file = open(file_name, 'w')
-        file.write(t)
-        file.close()
+                # 修改每一行的标签id
+                for i in range(len(lines)):
+                    parts = lines[i].split(" ")
+                    parts[0] = str(id_mapping[int(parts[0])])  # 更新id
+                    lines[i] = " ".join(parts)
+
+                # 将修改后的行写回文件
+                with open(os.path.join(root, file), "w") as f:
+                    f.writelines(lines)
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('path_dir', type=str, default='', help='Location of path')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Update label files")
+    parser.add_argument("folder_path", type=str, help="Path to the folder containing label files")
     args = parser.parse_args()
-    change_label_name(args.path_dir)
-    print("Finish change_label_id!")
+
+    update_labels(args.folder_path)
