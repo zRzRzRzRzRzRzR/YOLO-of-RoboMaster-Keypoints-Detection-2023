@@ -12,7 +12,7 @@
 
 **```注意```**
 
-+ 如果你需要下载仅有识别的代码，请克隆```only-detect```分支，最新的代码无法保证性能稳定。<br>
++ 如果你需要下载仅有识别的代码，请克隆```only-detect```分支。<br>
 + 如果你正在寻找雷达小目标识别的代码，请前往[这里](https://github.com/zRzRzRzRzRzRzR/Mult-YOLO-alogorithm-of-RoboMaster-Radar-Detection-2023)
 
 ## 环境配置
